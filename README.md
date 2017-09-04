@@ -52,3 +52,7 @@ RuntimeError: There is no current event loop in thread 'Thread-1'.
 ```
 
 I can't find any useful insight into this.
+
+## Other Approaches
+
+There's an asyncio-based microframework called [Quart](https://gitlab.com/pgjones/quart) that follows the Flask API. [Example branch](https://github.com/whatisjasongoldstein/python-async-experiment/tree/quart) courtesy of @pgjones
