@@ -1,22 +1,21 @@
 import asyncio
 import aiohttp
-import requests
-from flask import Flask
+from quart import Quart
 
-app = Flask(__name__)
+app = Quart(__name__)
 
 
 async def fetch(url, session):
     async with session.get(url) as response:
-        # The response read is sort of like 
+        # The response read is sort of like
         # a promise. If you await response,
         # well, response is just a regular object,
         # it doesn't have a resolution to wait for.
-        # 
+        #
         # However, I want to return the whole
         # response, not just the html, so we'll
         # wrap it in a dictionary.
-        # 
+        #
         # I'd like to catch exceptions here, but it doesn't
         # seem to work.
         html = await response.read()
@@ -28,7 +27,7 @@ async def fetch(url, session):
 
 
 @app.route("/")
-def hello():
+async def hello():
 
     urls = [
         "https://whatisjasongoldstein.com/",
@@ -43,30 +42,24 @@ def hello():
     # Share the session between calls
     session = aiohttp.ClientSession()
 
-    tasks = []
-    for url in urls:
-        tasks.append(asyncio.ensure_future(fetch(url, session)))
+    futures = [asyncio.ensure_future(fetch(url, session)) for url in urls]
 
-    loop = asyncio.get_event_loop()
-
-    # Gather is like $.when or Promise.all in javascript
-    # Return exceptions tells it to add each exception to the list.
-    responses = loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
-    
     output = ""
-    for resp in responses:
+    for future in futures:
 
-        # Return exceptions will keep the errors
-        # in the list instead of crashing the whole process.
-        if isinstance(resp, Exception):
-            output += "<p><b>Error:</b> %s<p>" % resp
+        try:
+            resp = await future
+        except Exception as error:
+            # Return exceptions will keep the errors
+            # in the list instead of crashing the whole process.
+            output += "<p><b>Error:</b> %s<p>" % error
             continue
-
-        output += "<p>%s loaded with a status %s and a length of %s</p>" % (
+        else:
+            output += "<p>%s loaded with a status %s and a length of %s</p>" % (
                 resp["url"], resp["resp"].status, len(resp["html"])
             )
 
     return output
 
 if __name__ == "__main__":
-    app.run(debug=False)  # Only works without DEBUG?
+    app.run()
